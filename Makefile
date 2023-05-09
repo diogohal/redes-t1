@@ -1,8 +1,14 @@
-all: ConexaoRawSocket.o t1.o
-	gcc ConexaoRawSocket.o t1.o -o t1
+all: rawSocketConnection.o client.o
+	gcc rawSocketConnection.o client.o -o client
 
-ConexaoRawSocket.o: ConexaoRawSocket.c
-	gcc -c ConexaoRawSocket.c
+rawSocketConnection.o: rawSocketConnection.c
+	gcc -c rawSocketConnection.c
 
-t1.o: t1.c
-	gcc -c t1.c
+client.o: client.c
+	gcc -c client.c
+
+run: all
+	./client
+
+clean:
+	rm -f *.o
