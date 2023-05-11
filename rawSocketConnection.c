@@ -18,6 +18,7 @@ int rawSocketConnection(char *device) {
   memset(&ir, 0, sizeof(struct ifreq));  	/*dispositivo eth0*/
   memcpy(ir.ifr_name, device, sizeof(device));
   if (ioctl(skt, SIOCGIFINDEX, &ir) == -1) {
+    printf(" %s\n",strerror(errno));
     printf("Erro no ioctl\n");
     exit(-1);
   }

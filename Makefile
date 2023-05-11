@@ -12,3 +12,6 @@ run: all
 
 clean:
 	rm -f *.o
+
+purge: clean
+	rm -f client
