@@ -10,4 +10,6 @@ struct protocol {
     unsigned int parity : 8;
 }; typedef struct protocol protocol_t;
 
+protocol_t createMessage (unsigned int sequel, unsigned int type, unsigned char data[64]);
+
 #endif
