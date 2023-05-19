@@ -8,36 +8,46 @@
 #define DEST_PORT 8080
 #define DEST_IP "172.18.0.1"
 
+int calcBufferSize(unsigned char *msg) {
+
+    int bufferSize = 0;
+    int msgSize = strlen(msg);
+
+    if (msgSize % DATA_SIZE == 0)
+        bufferSize = msgSize / DATA_SIZE;
+    else
+        bufferSize = msgSize/DATA_SIZE + 1;
+
+    return bufferSize;
+
+}
+
 int main() {
 
-    int sockfd;
-    char *msg = "hello world";
-    int msg_len = (strlen(msg));
+    int sockfd = 0;
+    int bufferSize = 0;
     struct sockaddr_in dest_addr;
-    protocol_t message = createMessage(0, 0, "Hello World!");
-    
+    protocol_t **messageBuffer = NULL;
+    int running = 1;
+    int count = 0;
+    unsigned char *msg = "EU ODEIO O NATAEL EU ODEIO O NATAEL EU ODEIO O NATAEL EU ODEIO O NATAEL EU ODEIO O NATAEL EU ODEIO O NATAEL EU ODEIO O NATAEL EU ODEIO O NATAEL EU ODEIO O NATAEL EU ODEIO O NATAEL EU ODEIO O NATAEL!!!";
+    // unsigned char *msg = "Fernado Diogo Redes Fernado Diogo Redes Fernado Diogo Redes Fernado Diogo Redes Fernado Diogo Redes Fernado Diogo Redes Fernandoo";
+    char cmd[100];
     sockfd = rawSocketConnection("enp0s25");
+    
+    while (running) {
+        fgets(cmd, sizeof(cmd), stdin);
+        cmd[strcspn(cmd, "\n")] = '\0';
+        if (!strcmp(cmd, "backup")) {
+            bufferSize = calcBufferSize(msg);
+            messageBuffer = createMessageBuffer(msg, bufferSize);
+            printBuff (messageBuffer, bufferSize);
+            sendMessage(messageBuffer, sockfd, bufferSize);
 
-    send(sockfd, message.data, 96, 0);
-
-    // memset(&dest_addr, 0, sizeof(dest_addr));
-
-    // dest_addr.sin_family = AF_INET;
-    // dest_addr.sin_port = htons(DEST_PORT);
-
-    // if (inet_aton(DEST_IP, &dest_addr.sin_addr) == 0) {
-    //     perror("inet_aton");
-    //     exit(1);
-    // }
-
-    // if (send(sockfd, msg, 13, 0) < 0) {
-    //     perror("send");
-    //     printf(" %s\n",strerror(errno));
-    //     exit(1);
-    // }
-
-    // printf("%d\n", sizeof(char*) * msg_len);
-    // close(sockfd);
+        } else if (!strcmp(cmd, "exit")) {
+            running = 0;
+        }
+    }
 
     return 0;
 

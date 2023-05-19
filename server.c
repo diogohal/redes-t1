@@ -11,7 +11,7 @@ int main() {
     server = rawSocketConnection("enp0s31f6");
     char *hello = "Hello World from server";
 
-    valread = read(new_socket)
+    valread = read(new_socket);
     
     
     return 0;
