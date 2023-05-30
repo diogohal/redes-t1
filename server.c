@@ -14,12 +14,10 @@ int main() {
     protocol_t *auxMessage = NULL;
     unsigned char *msg = NULL;
     protocol_t message;
-    server = rawSocketConnection("eno1");
+    server = rawSocketConnection("lo");
     while(1) {
         recv(server, &message, 67, 0);
         if(message.init_mark == 126) {
-            // printf("ORDER = %d | %s\n\n\n", message.sequel, message.data);
-            // printf("%s", message.data);
             auxMessage = createMessage(message.sequel, message.type, message.data);
             auxNode = createNode(auxMessage);
             addNode(root, auxNode);

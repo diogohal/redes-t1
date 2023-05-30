@@ -28,22 +28,24 @@ int main() {
     int sockfd = 0;
     int bufferSize = 0;
     struct sockaddr_in dest_addr;
+    char *token = NULL;
     FILE *file = fopen("data/babababy.txt" , "r");
     protocol_t **messageBuffer = NULL;
     int running = 1;
     int count = 0;
     unsigned char *msg = readArchive(file);
-    // unsigned char *msg = "Fernado Diogo Redes Fernado Diogo Redes Fernado Diogo Redes Fernado Diogo Redes Fernado Diogo Redes Fernado Diogo Redes Fernandoo";
     char cmd[100];
-    sockfd = rawSocketConnection("enp0s25");
+    sockfd = rawSocketConnection("lo");
     
     while (running) {
         fgets(cmd, sizeof(cmd), stdin);
+        token = strtok(cmd, " ");
+        printf("%s\n", token);
         cmd[strcspn(cmd, "\n")] = '\0';
-        if (!strcmp(cmd, "backup")) {
+        if (!strcmp(token, "backup")) {
+            printf("entrou!!\n");
             bufferSize = calcBufferSize(msg);
             messageBuffer = createMessageBuffer(msg, bufferSize);
-            printBuff (messageBuffer, bufferSize);
             sendMessage(messageBuffer, sockfd, bufferSize);
 
         } else if (!strcmp(cmd, "exit")) {

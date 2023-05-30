@@ -26,7 +26,6 @@ protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char
     strncpy(message->data, data, DATA_SIZE);
     message->parity = 0;
 
-    printf("DENTRO!\n");
     return message;
 }
 
@@ -48,7 +47,6 @@ void protocolToBuffer (unsigned char buffer[68], protocol_t *message) {
 
 protocol_t **createMessageBuffer (unsigned char *msg, int bufferSize) {
     
-    int modMsg = strlen(msg) % DATA_SIZE;
     char mensagem[DATA_SIZE];
 
     protocol_t **buf = malloc(sizeof(protocol_t) * bufferSize);
