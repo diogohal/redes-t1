@@ -18,13 +18,15 @@ protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char
             message->init_mark |= (1 << i);
     }
 
+
     //alocate the size of the message on the protocol
-    message->size = size = size;
+    message->size = size;
     message->sequel = sequel;
     message->type = type;
     strncpy(message->data, data, DATA_SIZE);
     message->parity = 0;
 
+    printf("DENTRO!\n");
     return message;
 }
 
@@ -76,4 +78,66 @@ void printBuff (protocol_t **buf, int bufferSize) {
     for (int i = 0; i < bufferSize; i++) {
         printf("init_mark: %d size: %d sequel: %d type: %d data: %s, parity: %d \n" , buf[i]->init_mark, buf[i]->size, buf[i]->sequel, buf[i]->type, buf[i]->data, buf[i]->parity);
     }
+}
+
+
+root_t *createRoot() {
+
+    root_t *root = malloc(sizeof(root_t));
+    if(!root)
+        return NULL;
+    
+    root->head = NULL;
+    root->tail = NULL;
+    root->count = 0;
+
+    return root;
+
+}
+
+node_t *createNode(protocol_t *message) {
+
+    node_t *node = malloc(sizeof(node_t));
+    if(!node)
+        return NULL;
+    
+    node->message = message;
+    node->before = NULL;
+    node->next = NULL;
+
+    return node;
+
+}
+
+void addNode(root_t *root, node_t *node) {
+
+    node_t *aux = root->head;
+    if(!aux) {
+        root->head = node;
+        root->tail = node;
+    }
+    else if(node->message->sequel < root->head->message->sequel) {
+        node->next = root->head;
+        root->head->before = node;
+        root->head = node;
+    }
+    else if(node->message->sequel > root->tail->message->sequel) {
+        root->tail->next = node;
+        node->before = root->tail; 
+        root->tail = node;
+    }
+    else {
+        while(aux) {
+            if(node->message->sequel < aux->message->sequel) {
+                node->next = aux;
+                node->before = aux->before;
+                node->before->next = node;
+                aux->before = node;
+                break;
+            }
+            aux = aux->next; 
+        }
+    }
+    root->count++;
+
 }
