@@ -19,7 +19,7 @@ protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char
     }
 
     //alocate the size of the message on the protocol
-    message->size = size = size;
+    message->size = size;
     message->sequel = sequel;
     message->type = type;
     strncpy(message->data, data, DATA_SIZE);
@@ -55,7 +55,12 @@ protocol_t **createMessageBuffer (unsigned char *msg, int bufferSize) {
         for (int i = 0; i < DATA_SIZE; i++) {
             mensagem[i] = msg[i + (j*DATA_SIZE)];
         }
-        buf[j] = createMessage(j, 0, mensagem);
+        if (j == bufferSize-1)
+            buf[j] = createMessage(j, 9, mensagem);
+        else if (j == 0)
+            buf[j] = createMessage(j, 0, mensagem);
+        else
+            buf[j] = createMessage(j, 8, mensagem);
     }
 
     return buf;

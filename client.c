@@ -3,6 +3,7 @@
 #include <string.h>
 #include <errno.h>
 #include "rawSocketConnection.h"
+#include "fileHandler.h"
 #include "packages.h"
 
 #define DEST_PORT 8080
@@ -27,10 +28,11 @@ int main() {
     int sockfd = 0;
     int bufferSize = 0;
     struct sockaddr_in dest_addr;
+    FILE *file = fopen("data/babababy.txt" , "r");
     protocol_t **messageBuffer = NULL;
     int running = 1;
     int count = 0;
-    unsigned char *msg = "EU ODEIO O NATAEL EU ODEIO O NATAEL EU ODEIO O NATAEL EU ODEIO O NATAEL EU ODEIO O NATAEL EU ODEIO O NATAEL EU ODEIO O NATAEL EU ODEIO O NATAEL EU ODEIO O NATAEL EU ODEIO O NATAEL EU ODEIO O NATAEL!!!";
+    unsigned char *msg = readArchive(file);
     // unsigned char *msg = "Fernado Diogo Redes Fernado Diogo Redes Fernado Diogo Redes Fernado Diogo Redes Fernado Diogo Redes Fernado Diogo Redes Fernandoo";
     char cmd[100];
     sockfd = rawSocketConnection("enp0s25");
