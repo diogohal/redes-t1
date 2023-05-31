@@ -23,6 +23,43 @@ int calcBufferSize(unsigned char *msg) {
 
 }
 
+void getCommand(int *command, char *input) {
+
+    char *token = NULL;
+    token = strtok(input, " ");
+    token[strcspn(token, "\n")] = '\0';
+    if(!strcmp(token, "backup"))
+        *command = 1;
+    else if(!strcmp(token, "exit"))
+        *command = 0;
+    else
+        *command = 404;
+
+}
+
+void getDirPath(char *dirPath, char *input) {
+
+    char *token = NULL;
+    token = strtok(input, " ");
+    token = strtok(NULL, " ");
+    if(token) {
+        strcpy(dirPath, token);
+        dirPath[strcspn(dirPath, "\n")] = '\0';
+    }
+}
+
+void getFileName(char *fileName, char *input) {
+
+    char *token = NULL;
+    printf("inputt = %s\n", input);
+    token = strtok(input, "/");
+    while(token) {
+        strcpy(fileName, token);
+        token = strtok(NULL, "/");
+    }
+
+}
+
 int main() {
 
     // Variables and structs used in the client
@@ -30,31 +67,49 @@ int main() {
     int bufferSize = 0;
     struct sockaddr_in dest_addr;
     char *token = NULL;
-    char *fileName = "musica.txt";
-    FILE *file = fopen("data/babababy.txt" , "r");
+    FILE *file = NULL;
     protocol_t **messageBuffer = NULL;
     int running = 1;
     int count = 0;
-    unsigned char *msg = readArchive(file);
+    unsigned char *msg = NULL;
     char cmd[100];
+    char saveCmd[100];
     sockfd = rawSocketConnection("lo");
+    int command = -1; char dirPath[200]; char fileName[50];
     
     // Client running
     while (running) {
-        // Get terminal command
+        // ----- Get terminal command -----
+        command = -1;
         fgets(cmd, sizeof(cmd), stdin);
-        token = strtok(cmd, " ");
-        printf("%s\n", token);
-        cmd[strcspn(cmd, "\n")] = '\0';
-        // Commands execution
-        // 1 file backup
-        if (!strcmp(token, "backup")) {
+        strcpy(saveCmd, cmd);
+        getCommand(&command, cmd);
+        strcpy(cmd, saveCmd);
+        // ----- Commands execution -----
+        // 1) 1 file backup
+        if (command == 1) {
+            getDirPath(dirPath, cmd);
+            file = fopen(dirPath, "r");
+            if(!file) {
+                printf("Arquivo ou diretório inexistente!\n");
+                continue;
+            }
+            // Get filename
+            strcpy(cmd, saveCmd);
+            getFileName(fileName, cmd);
+            msg = readArchive(file);
             bufferSize = calcBufferSize(msg)+2;
             messageBuffer = createMessageBuffer(msg, bufferSize, fileName);
             sendMessage(messageBuffer, sockfd, bufferSize);
-        // Exit
-        } else if (!strcmp(cmd, "exit"))
+            fclose(file);
+        
+        // 0) Exit
+        } else if (command == 0)
             running = 0;
+        
+        // 404) Error
+        else if(command = 404)
+            printf("Comando não encontrado!\n");
     }
 
     return 0;

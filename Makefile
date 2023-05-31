@@ -20,7 +20,6 @@ packages.o: packages.c
 	gcc -c packages.c
 
 runc: client
-	clear
 	./client
 
 runs: server
