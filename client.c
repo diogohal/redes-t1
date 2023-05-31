@@ -25,10 +25,12 @@ int calcBufferSize(unsigned char *msg) {
 
 int main() {
 
+    // Variables and structs used in the client
     int sockfd = 0;
     int bufferSize = 0;
     struct sockaddr_in dest_addr;
     char *token = NULL;
+    char *fileName = "musica.txt";
     FILE *file = fopen("data/babababy.txt" , "r");
     protocol_t **messageBuffer = NULL;
     int running = 1;
@@ -37,20 +39,22 @@ int main() {
     char cmd[100];
     sockfd = rawSocketConnection("lo");
     
+    // Client running
     while (running) {
+        // Get terminal command
         fgets(cmd, sizeof(cmd), stdin);
         token = strtok(cmd, " ");
         printf("%s\n", token);
         cmd[strcspn(cmd, "\n")] = '\0';
+        // Commands execution
+        // 1 file backup
         if (!strcmp(token, "backup")) {
-            printf("entrou!!\n");
-            bufferSize = calcBufferSize(msg);
-            messageBuffer = createMessageBuffer(msg, bufferSize);
+            bufferSize = calcBufferSize(msg)+2;
+            messageBuffer = createMessageBuffer(msg, bufferSize, fileName);
             sendMessage(messageBuffer, sockfd, bufferSize);
-
-        } else if (!strcmp(cmd, "exit")) {
+        // Exit
+        } else if (!strcmp(cmd, "exit"))
             running = 0;
-        }
     }
 
     return 0;

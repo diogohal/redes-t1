@@ -45,24 +45,24 @@ void protocolToBuffer (unsigned char buffer[68], protocol_t *message) {
     return;
 }
 
-protocol_t **createMessageBuffer (unsigned char *msg, int bufferSize) {
+protocol_t **createMessageBuffer (unsigned char *msg, int bufferSize, unsigned char *fileName) {
     
     char mensagem[DATA_SIZE];
 
-    protocol_t **buf = malloc(sizeof(protocol_t) * bufferSize);
+    protocol_t **buf = malloc(sizeof(protocol_t) * (bufferSize));
+    // First message is the backup type with it's filename
+    buf[0] = createMessage(0, 0, fileName);
+    // Last message is the ending file type
+    buf[bufferSize-1] = createMessage(bufferSize-1, 9, "");
 
-    for (int j = 0; j < bufferSize; j++) {
+    for (int j = 0; j < bufferSize-2; j++) {
         for (int i = 0; i < DATA_SIZE; i++) {
             mensagem[i] = msg[i + (j*DATA_SIZE)];
         }
-        if (j == bufferSize-1)
-            buf[j] = createMessage(j, 9, mensagem);
-        else if (j == 0)
-            buf[j] = createMessage(j, 0, mensagem);
-        else
-            buf[j] = createMessage(j, 8, mensagem);
+        printf("%d = %s", j+1, mensagem);
+        buf[j+1] = createMessage(j+1, 8, mensagem);
     }
-
+    
     return buf;
 }
 

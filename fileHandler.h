@@ -5,6 +5,6 @@
 
 unsigned char *readArchive(FILE *file);
 unsigned char *createString(root_t *root);
-void writeFile(unsigned char *string);
+void writeFile(unsigned char *string, unsigned char *fileName);
 
 #endif

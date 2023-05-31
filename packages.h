@@ -28,7 +28,7 @@ protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char
 
 void protocolToBuffer (unsigned char buffer[68], protocol_t *protocol);
 
-protocol_t **createMessageBuffer (unsigned char *msg, int bufferSize);
+protocol_t **createMessageBuffer (unsigned char *msg, int bufferSize, unsigned char *fileName);
 
 void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize);
 

@@ -23,9 +23,12 @@ unsigned char *readArchive(FILE *file) {
 
 }
 
-void writeFile(unsigned char *string) {
+void writeFile(unsigned char *string, unsigned char *fileName) {
 
-    FILE *file = fopen("./backup/test.txt", "w");
+    char filePath[200];
+    strcpy(filePath, "./backup/");
+    strcat(filePath, fileName);
+    FILE *file = fopen(filePath, "w");
 
     fprintf(file, "%s", string);
 
@@ -37,7 +40,7 @@ unsigned char *createString(root_t *root) {
 
     unsigned char *string = malloc((root->count-1)*DATA_SIZE + strlen(root->tail->message->data));
     string[0] = '\0';
-    node_t *aux = root->head;
+    node_t *aux = root->head->next;
     while(aux) {
         strcat(string, aux->message->data);
         aux = aux->next;
