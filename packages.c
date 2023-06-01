@@ -29,6 +29,15 @@ protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char
     return message;
 }
 
+int sendACK(int raw) {
+    unsigned char buffer[67];
+    protocol_t *ack = createMessage(0, 14, "");
+
+    memcpy(buffer, ack, sizeof(protocol_t));
+
+    send(raw, buffer, 67, 0);
+}
+
 void protocolToBuffer (unsigned char buffer[68], protocol_t *message) {
     
     unsigned char *bufferPtr = buffer;
@@ -64,13 +73,23 @@ protocol_t **createMessageBuffer (unsigned char *msg, int bufferSize, unsigned c
     return buf;
 }
 
-void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize) {
+void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize, int raw) {
 
     unsigned char buffer[67];
+    protocol_t message;
+
     for(int i = 0; i < bufferSize; i++) {
         // protocolToBuffer(buffer, messageBuffer[i]);
         memcpy(buffer, messageBuffer[i], sizeof(protocol_t));
-        send(socket, buffer, 68, 0);
+        
+        send(socket, buffer, 67, 0);
+        printf("Mensagem enviada!\n");
+        
+        while (1) {
+            recv(raw, &message, 67, 0);
+            if (message.init_mark == 126 && message.type == 14)
+                break;
+        }
     }
 
 }
