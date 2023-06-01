@@ -51,7 +51,6 @@ void getDirPath(char *dirPath, char *input) {
 void getFileName(char *fileName, char *input) {
 
     char *token = NULL;
-    printf("inputt = %s\n", input);
     token = strtok(input, "/");
     while(token) {
         strcpy(fileName, token);
@@ -68,6 +67,7 @@ int main() {
     struct sockaddr_in dest_addr;
     char *token = NULL;
     FILE *file = NULL;
+    size_t fileSize;
     protocol_t **messageBuffer = NULL;
     int running = 1;
     int count = 0;
@@ -89,7 +89,7 @@ int main() {
         // 1) 1 file backup
         if (command == 1) {
             getDirPath(dirPath, cmd);
-            file = fopen(dirPath, "r");
+            file = fopen(dirPath, "rb");
             if(!file) {
                 printf("Arquivo ou diretório inexistente!\n");
                 continue;
@@ -102,7 +102,7 @@ int main() {
             messageBuffer = createMessageBuffer(msg, bufferSize, fileName);
             sendMessage(messageBuffer, sockfd, bufferSize);
             fclose(file);
-        
+
         // 0) Exit
         } else if (command == 0)
             running = 0;

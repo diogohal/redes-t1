@@ -4,13 +4,13 @@
 #include "packages.h"
 #include "fileHandler.h"
 
+// ---------- READ FUNCTIONS ----------
 unsigned char *readArchive(FILE *file) {
 
     int count = 0;
     while(fgetc(file) != EOF)
         count++;
 
-    printf("%d\n", count);
     rewind(file);
     unsigned char *fileContent = malloc(sizeof(unsigned char)*count + 1);
     if(!fileContent)
@@ -23,6 +23,7 @@ unsigned char *readArchive(FILE *file) {
 
 }
 
+// ---------- WRITE FUNCTIONS ----------
 void writeFile(unsigned char *string, unsigned char *fileName) {
 
     char filePath[200];

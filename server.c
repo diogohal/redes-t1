@@ -30,7 +30,6 @@ int main() {
             // Check for message ending. Needs a timestamp
             if(message.type == 9) {
                 msg = createString(root);
-                printf("NOME DO ARQUIVO = %s\n", root->head->message->data);
                 writeFile(msg, root->head->message->data);
             }
         }

@@ -59,10 +59,8 @@ protocol_t **createMessageBuffer (unsigned char *msg, int bufferSize, unsigned c
         for (int i = 0; i < DATA_SIZE; i++) {
             mensagem[i] = msg[i + (j*DATA_SIZE)];
         }
-        printf("%d = %s", j+1, mensagem);
         buf[j+1] = createMessage(j+1, 8, mensagem);
     }
-    
     return buf;
 }
 
