@@ -29,6 +29,17 @@ protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char
     return message;
 }
 
+int sendACK(int raw) {
+
+    int result = 0;
+    unsigned char buffer[67];
+    protocol_t *ack = createMessage(0, 14, "");
+    memcpy(buffer, ack, sizeof(protocol_t));
+    result = send(raw, buffer, 67, 0);
+    return result;
+
+}
+
 void protocolToBuffer (unsigned char buffer[68], protocol_t *message) {
     
     unsigned char *bufferPtr = buffer;
