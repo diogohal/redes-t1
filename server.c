@@ -15,22 +15,32 @@ int main() {
     protocol_t *auxMessage = NULL;
     unsigned char *msg = NULL;
     protocol_t message;
-    server = rawSocketConnection("lo");
+    server = rawSocketConnection("eno1");
 
     // Server running
     while(1) {
         // Receive message and check init_mark
         recv(server, &message, 67, 0);
         if(message.init_mark == 126) {
+            printf("Recebi mensagem %d\n", message.sequel);
+            // Server-Client talk
+            if(message.type != 9) {
+                sendACK(server);
+                printf("ACK ENVIADO!\n");
+            }
+
+
+
             // Create a list of messages
             auxMessage = createMessage(message.sequel, message.type, message.data);
             auxNode = createNode(auxMessage);
             addNode(root, auxNode);
-            printf("Recebi mensagem %d\n", message.sequel);
             // Check for message ending. Needs a timestamp
-            if(message.type == 9) {
+            if(messageComplete(root)) {
                 msg = createString(root);
                 writeFile(msg, root->head->message->data);
+                destroyNodes(root);
+                printf("Arquivo escrito!\n");
             }
         }
     }

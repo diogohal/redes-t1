@@ -42,4 +42,6 @@ node_t *createNode(protocol_t *message);
 
 void addNode(root_t *root, node_t *node);
 
+int sendACK(int raw);
+
 #endif

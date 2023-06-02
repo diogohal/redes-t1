@@ -50,3 +50,36 @@ unsigned char *createString(root_t *root) {
     return string;
 
 }
+
+int messageComplete(root_t *root) {
+
+    node_t *aux = root->head;
+    int count = 0;
+
+    while(aux) {
+        if(count != aux->message->sequel)
+            return 0;
+        else if(aux->message->type == 9)
+            return 1;
+        aux = aux->next;
+        count++;
+    }
+
+    return 0;
+
+}
+
+void destroyNodes(root_t *root) {
+
+    node_t *aux = root->head;
+    node *del = NULL;
+    while(aux) {
+        del = aux;
+        aux = aux->next;
+        free(del->message);
+        free(del);
+    }
+    
+    root->count = 0;
+
+}
