@@ -54,6 +54,7 @@ void getFileName(char *fileName, char *input) {
     token = strtok(input, "/");
     while(token) {
         strcpy(fileName, token);
+        fileName[strcspn(fileName, "\n")] = '\0';
         token = strtok(NULL, "/");
     }
 
@@ -74,7 +75,7 @@ int main() {
     unsigned char *msg = NULL;
     char cmd[100];
     char saveCmd[100];
-    sockfd = rawSocketConnection("lo");
+    sockfd = rawSocketConnection("eno1");
     int command = -1; char dirPath[200]; char fileName[50];
     
     // Client running
@@ -100,7 +101,7 @@ int main() {
             msg = readArchive(file);
             bufferSize = calcBufferSize(msg)+2;
             messageBuffer = createMessageBuffer(msg, bufferSize, fileName);
-            sendMessage(messageBuffer, sockfd, bufferSize);
+            sendMessage(messageBuffer, sockfd, bufferSize, sockfd);
             fclose(file);
 
         // 0) Exit

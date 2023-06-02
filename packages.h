@@ -26,11 +26,13 @@ typedef struct root {
 
 protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char *data);
 
+int sendACK(int raw);
+
 void protocolToBuffer (unsigned char buffer[68], protocol_t *protocol);
 
 protocol_t **createMessageBuffer (unsigned char *msg, int bufferSize, unsigned char *fileName);
 
-void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize);
+void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize, int raw);
 
 void printBuff (protocol_t **buf, int bufferSize);
 
