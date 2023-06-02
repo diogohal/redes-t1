@@ -44,4 +44,8 @@ void addNode(root_t *root, node_t *node);
 
 int sendACK(int raw);
 
+void sendFile(unsigned char *msg, unsigned char *fileName, int sockfd);
+
+int receiveFileMessage(root_t *root, protocol_t message);
+
 #endif

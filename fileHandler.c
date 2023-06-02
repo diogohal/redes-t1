@@ -72,7 +72,7 @@ int messageComplete(root_t *root) {
 void destroyNodes(root_t *root) {
 
     node_t *aux = root->head;
-    node *del = NULL;
+    node_t *del = NULL;
     while(aux) {
         del = aux;
         aux = aux->next;

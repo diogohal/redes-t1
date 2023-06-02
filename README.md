@@ -9,3 +9,4 @@
 ## Implementar paridade vertical
 ## Verificar backup
 ## Escolher diretório do servidor
+## Selecionar socket automaticamente

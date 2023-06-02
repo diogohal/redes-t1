@@ -30,4 +30,4 @@ clean:
 	rm -f *.o
 
 purge: clean
-	rm -f client
+	rm -f client server

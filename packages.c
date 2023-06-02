@@ -3,6 +3,7 @@
 #include "packages.h"
 #include "string.h"
 #include "rawSocketConnection.h"
+#include "fileHandler.h"
 
 protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char *data) {
     
@@ -27,15 +28,6 @@ protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char
     message->parity = 0;
 
     return message;
-}
-
-int sendACK(int raw) {
-    int result = 0;
-    unsigned char buffer[67];
-    protocol_t *ack = createMessage(0, 14, "");
-    memcpy(buffer, ack, sizeof(protocol_t));
-    result = send(raw, buffer, 67, 0);
-    return result;
 }
 
 void protocolToBuffer (unsigned char buffer[68], protocol_t *message) {
@@ -73,24 +65,17 @@ protocol_t **createMessageBuffer (unsigned char *msg, int bufferSize, unsigned c
     return buf;
 }
 
-void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize, int raw) {
+int calcBufferSize(unsigned char *msg) {
 
-    unsigned char buffer[67];
-    protocol_t message;
+    int bufferSize = 0;
+    int msgSize = strlen(msg);
 
-    for(int i = 0; i < bufferSize; i++) {
-        // protocolToBuffer(buffer, messageBuffer[i]);
-        memcpy(buffer, messageBuffer[i], sizeof(protocol_t));
-        
-        send(socket, buffer, 67, 0);
-        printf("Mensagem enviada!\n");
-        
-        while (1) {
-            recv(raw, &message, 67, 0);
-            if (message.init_mark == 126 && message.type == 14)
-                break;
-        }
-    }
+    if (msgSize % DATA_SIZE == 0)
+        bufferSize = msgSize / DATA_SIZE;
+    else
+        bufferSize = msgSize/DATA_SIZE + 1;
+
+    return bufferSize;
 
 }
 
@@ -155,9 +140,71 @@ void addNode(root_t *root, node_t *node) {
                 aux->before = node;
                 break;
             }
+            // bug treatment for loopback
+            else if(node->message->sequel == aux->message->sequel)
+                return;
             aux = aux->next; 
         }
     }
     root->count++;
+
+}
+
+// ---------- SEND FUNCTIONS ----------
+void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize, int raw) {
+
+    unsigned char buffer[67];
+    protocol_t message;
+
+    for(int i = 0; i < bufferSize; i++) {
+        // protocolToBuffer(buffer, messageBuffer[i]);
+        memcpy(buffer, messageBuffer[i], sizeof(protocol_t));
+        
+        send(socket, buffer, 67, 0);
+        printf("Mensagem enviada!\n");
+        
+        while (1) {
+            recv(raw, &message, 67, 0);
+            if (message.init_mark == 126 && message.type == 14)
+                break;
+        }
+    }
+
+}
+
+int sendACK(int raw) {
+    
+    int result = 0;
+    unsigned char buffer[67];
+    protocol_t *ack = createMessage(0, 14, "");
+    memcpy(buffer, ack, sizeof(protocol_t));
+    result = send(raw, buffer, 67, 0);
+    return result;
+
+}
+
+void sendFile(unsigned char *msg, unsigned char *fileName, int sockfd) {
+
+    int bufferSize = calcBufferSize(msg)+2;
+    protocol_t **messageBuffer = createMessageBuffer(msg, bufferSize, fileName);
+    sendMessage(messageBuffer, sockfd, bufferSize, sockfd);
+
+}
+
+
+// ---------- RECEIVING FUNCTIONS ----------
+int receiveFileMessage(root_t *root, protocol_t message) {
+
+    protocol_t *auxMessage = createMessage(message.sequel, message.type, message.data);
+    node_t *auxNode = createNode(auxMessage);
+    addNode(root, auxNode);
+    // Check for message ending. Needs a timestamp
+    if(messageComplete(root)) {
+        unsigned char *msg = createString(root);
+        writeFile(msg, root->head->message->data);
+        destroyNodes(root);
+        printf("Arquivo escrito!\n");
+        return 1;
+    }
 
 }

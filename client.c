@@ -1,27 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include <errno.h>
+#include <dirent.h>
 #include "rawSocketConnection.h"
 #include "fileHandler.h"
 #include "packages.h"
-
-#define DEST_PORT 8080
-#define DEST_IP "172.18.0.1"
-
-int calcBufferSize(unsigned char *msg) {
-
-    int bufferSize = 0;
-    int msgSize = strlen(msg);
-
-    if (msgSize % DATA_SIZE == 0)
-        bufferSize = msgSize / DATA_SIZE;
-    else
-        bufferSize = msgSize/DATA_SIZE + 1;
-
-    return bufferSize;
-
-}
 
 void getCommand(int *command, char *input) {
 
@@ -29,9 +14,11 @@ void getCommand(int *command, char *input) {
     token = strtok(input, " ");
     token[strcspn(token, "\n")] = '\0';
     if(!strcmp(token, "backup"))
+        *command = 0;
+    else if(!strcmp(token, "backupdir"))
         *command = 1;
     else if(!strcmp(token, "exit"))
-        *command = 0;
+        *command = -1;
     else
         *command = 404;
 
@@ -67,6 +54,8 @@ int main() {
     int bufferSize = 0;
     struct sockaddr_in dest_addr;
     char *token = NULL;
+    DIR *dirStream = NULL;
+    struct dirent *dirEntry = NULL;
     FILE *file = NULL;
     size_t fileSize;
     protocol_t **messageBuffer = NULL;
@@ -75,37 +64,47 @@ int main() {
     unsigned char *msg = NULL;
     char cmd[100];
     char saveCmd[100];
-    sockfd = rawSocketConnection("eno1");
+    sockfd = rawSocketConnection("lo");
     int command = -1; char dirPath[200]; char fileName[50];
     
     // Client running
     while (running) {
         // ----- Get terminal command -----
-        command = -1;
+        command = -2;
         fgets(cmd, sizeof(cmd), stdin);
         strcpy(saveCmd, cmd);
         getCommand(&command, cmd);
         strcpy(cmd, saveCmd);
         // ----- Commands execution -----
         // 1) 1 file backup
-        if (command == 1) {
+        if (command == 0) {
             getDirPath(dirPath, cmd);
             file = fopen(dirPath, "rb");
             if(!file) {
                 printf("Arquivo ou diretório inexistente!\n");
                 continue;
             }
-            // Get filename
+            // Get fileName and it's content
             strcpy(cmd, saveCmd);
             getFileName(fileName, cmd);
             msg = readArchive(file);
-            bufferSize = calcBufferSize(msg)+2;
-            messageBuffer = createMessageBuffer(msg, bufferSize, fileName);
-            sendMessage(messageBuffer, sockfd, bufferSize, sockfd);
+            // Send and close file
+            sendFile(msg, fileName, sockfd);
             fclose(file);
+        }
+        // 2) Backup files inside folder
+        else if(command == 1) {
+            getDirPath(dirPath, cmd);
+            dirStream = opendir(dirPath);
+            if(!dirStream) {
+                printf("Diretório inexistente!\n");
+                continue;
+            }
+            dirEntry = readdir(dirStream);
+        }
 
         // 0) Exit
-        } else if (command == 0)
+        else if (command == -1)
             running = 0;
         
         // 404) Error
