@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "packages.h"
+#include <dirent.h>
 #include "string.h"
 #include "rawSocketConnection.h"
 #include "fileHandler.h"
@@ -28,22 +29,6 @@ protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char
     message->parity = 0;
 
     return message;
-}
-
-void protocolToBuffer (unsigned char buffer[68], protocol_t *message) {
-    
-    unsigned char *bufferPtr = buffer;
-
-    *bufferPtr++ = (unsigned char) (message->init_mark);
-    *bufferPtr++ = (unsigned char) ((message->size << 2) | (message->sequel >> 4));
-    *bufferPtr++ = (unsigned char) ((message->init_mark << 4) | message->type);
-
-    for (int i = 0; i < DATA_SIZE; i++)
-        *bufferPtr++ = message->data[i];
-    
-    *bufferPtr++ = (unsigned char) (message->parity);
-
-    return;
 }
 
 protocol_t **createMessageBuffer (unsigned char *msg, int bufferSize, unsigned char *fileName) {
@@ -81,7 +66,7 @@ int calcBufferSize(unsigned char *msg) {
 
 void printBuff (protocol_t **buf, int bufferSize) {
     for (int i = 0; i < bufferSize; i++) {
-        printf("init_mark: %d size: %d sequel: %d type: %d data: %s, parity: %d \n" , buf[i]->init_mark, buf[i]->size, buf[i]->sequel, buf[i]->type, buf[i]->data, buf[i]->parity);
+        printf("sequel = %d | type = %d | data = %s\n", buf[i]->sequel, buf[i]->type, buf[i]->data);
     }
 }
 
@@ -146,6 +131,7 @@ void addNode(root_t *root, node_t *node) {
             aux = aux->next; 
         }
     }
+
     root->count++;
 
 }
@@ -157,47 +143,76 @@ void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize, int raw
     protocol_t message;
 
     for(int i = 0; i < bufferSize; i++) {
-        // protocolToBuffer(buffer, messageBuffer[i]);
         memcpy(buffer, messageBuffer[i], sizeof(protocol_t));
-        
         send(socket, buffer, 67, 0);
         printf("Mensagem enviada!\n");
         
+        // Doesn't need to wait for ack response
+        if(i == bufferSize-1)
+            return;
+
         while (1) {
             recv(raw, &message, 67, 0);
-            if (message.init_mark == 126 && message.type == 14)
+            if (message.init_mark == 126 && message.type == 14 && message.sequel == messageBuffer[i]->sequel) {
+                printf("ack recebido!\n");
                 break;
+            }
         }
     }
 
 }
 
-int sendACK(int raw) {
+int sendACK(int raw, int sequel) {
     
     int result = 0;
     unsigned char buffer[67];
-    protocol_t *ack = createMessage(0, 14, "");
+    protocol_t *ack = createMessage(sequel, 14, "");
     memcpy(buffer, ack, sizeof(protocol_t));
     result = send(raw, buffer, 67, 0);
     return result;
 
 }
 
-void sendFile(unsigned char *msg, unsigned char *fileName, int sockfd) {
+void sendFile(FILE *file, unsigned char *fileName, int sockfd) {
 
+    unsigned char *msg = readArchive(file);
     int bufferSize = calcBufferSize(msg)+2;
     protocol_t **messageBuffer = createMessageBuffer(msg, bufferSize, fileName);
     sendMessage(messageBuffer, sockfd, bufferSize, sockfd);
 
 }
 
+void sendDirectory(unsigned char *dirPath, int socket) {
+
+    DIR *dirStream = opendir(dirPath);
+    char filePath[100];
+    struct dirent *dirEntry = NULL;
+    FILE *file = NULL;
+    while((dirEntry = readdir(dirStream)) != NULL) {
+        if(dirEntry->d_type == REGULAR_FILE) {
+            strcpy(filePath, dirPath);
+            strcat(filePath, "/");
+            strcat(filePath, dirEntry->d_name);
+            file = fopen(filePath, "r");
+            if(!file)
+                return;
+            printf("\n\nEnviando %s\n", dirEntry->d_name);
+            sendFile(file, dirEntry->d_name, socket);
+            fclose(file);
+        }
+    }
+    closedir(dirStream);
+
+}
 
 // ---------- RECEIVING FUNCTIONS ----------
 int receiveFileMessage(root_t *root, protocol_t message) {
 
     protocol_t *auxMessage = createMessage(message.sequel, message.type, message.data);
     node_t *auxNode = createNode(auxMessage);
+    printf("debugggg\n");
     addNode(root, auxNode);
+
     // Check for message ending. Needs a timestamp
     if(messageComplete(root)) {
         unsigned char *msg = createString(root);
@@ -206,5 +221,23 @@ int receiveFileMessage(root_t *root, protocol_t message) {
         printf("Arquivo escrito!\n");
         return 1;
     }
+    return 0;
+
+}
+
+
+// ---------- DESTROY FUNCTIONS ----------
+void destroyNodes(root_t *root) {
+
+    node_t *aux = root->head;
+    node_t *del = NULL;
+    while(aux) {
+        del = aux;
+        aux = aux->next;
+        free(del->message);
+        free(del);
+    }
+    
+    root->count = 0;
 
 }

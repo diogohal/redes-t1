@@ -68,18 +68,3 @@ int messageComplete(root_t *root) {
     return 0;
 
 }
-
-void destroyNodes(root_t *root) {
-
-    node_t *aux = root->head;
-    node_t *del = NULL;
-    while(aux) {
-        del = aux;
-        aux = aux->next;
-        free(del->message);
-        free(del);
-    }
-    
-    root->count = 0;
-
-}

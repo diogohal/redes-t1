@@ -87,9 +87,8 @@ int main() {
             // Get fileName and it's content
             strcpy(cmd, saveCmd);
             getFileName(fileName, cmd);
-            msg = readArchive(file);
             // Send and close file
-            sendFile(msg, fileName, sockfd);
+            sendFile(file, fileName, sockfd);
             fclose(file);
         }
         // 2) Backup files inside folder
@@ -100,7 +99,7 @@ int main() {
                 printf("Diretório inexistente!\n");
                 continue;
             }
-            dirEntry = readdir(dirStream);
+            sendDirectory(dirPath, sockfd);
         }
 
         // 0) Exit

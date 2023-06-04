@@ -7,6 +7,5 @@ unsigned char *readArchive(FILE *file);
 unsigned char *createString(root_t *root);
 void writeFile(unsigned char *string, unsigned char *fileName);
 int messageComplete(root_t *root);
-void destroyNodes(root_t *root);
 
 #endif
