@@ -40,7 +40,7 @@ node_t *createNode(protocol_t *message);
 
 void addNode(root_t *root, node_t *node);
 
-int sendACK(int raw, int sequel);
+int sendResponse(int raw, int sequel, int type, unsigned char *data);
 
 void sendFile(FILE *file, unsigned char *fileName, int sockfd);
 

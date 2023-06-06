@@ -2,6 +2,7 @@
 
 ## Enviar grupo de arquivos
 ## Arquivo binário
+## Implementar timeout
 ## Recuperar backup
 ## Implementar NACK
 ## Implementar erros

@@ -9,19 +9,10 @@
 protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char *data) {
     
     protocol_t *message = malloc(sizeof(protocol_t));
-    
-    int bit = 0, size = strlen(data);
+    int size = strlen(data);
 
-    //alocate the init mark on the protocol
-    for (int i = 0; i < 8; i++) {
-        if (i == 0 || i == 7)
-            message->init_mark |= (0 << i);
-        else
-            message->init_mark |= (1 << i);
-    }
-
-
-    //alocate the size of the message on the protocol
+    // Inicialize variables
+    message->init_mark = 126;
     message->size = size;
     message->sequel = sequel;
     message->type = type;
@@ -153,7 +144,7 @@ void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize, int raw
 
         while (1) {
             recv(raw, &message, 67, 0);
-            if (message.init_mark == 126 && message.type == 14 && message.sequel == messageBuffer[i]->sequel) {
+            if (message.init_mark == 126 && message.type == 14) {
                 printf("ack recebido!\n");
                 break;
             }
@@ -162,11 +153,11 @@ void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize, int raw
 
 }
 
-int sendACK(int raw, int sequel) {
+int sendResponse(int raw, int sequel, int type, unsigned char *data) {
     
     int result = 0;
     unsigned char buffer[67];
-    protocol_t *ack = createMessage(sequel, 14, "");
+    protocol_t *ack = createMessage(sequel, type, data);
     memcpy(buffer, ack, sizeof(protocol_t));
     result = send(raw, buffer, 67, 0);
     return result;
@@ -210,7 +201,6 @@ int receiveFileMessage(root_t *root, protocol_t message) {
 
     protocol_t *auxMessage = createMessage(message.sequel, message.type, message.data);
     node_t *auxNode = createNode(auxMessage);
-    printf("debugggg\n");
     addNode(root, auxNode);
 
     // Check for message ending. Needs a timestamp
@@ -237,7 +227,8 @@ void destroyNodes(root_t *root) {
         free(del->message);
         free(del);
     }
-    
+    root->head = NULL;
+    root->tail = NULL;
     root->count = 0;
 
 }

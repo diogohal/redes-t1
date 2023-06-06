@@ -54,7 +54,7 @@ unsigned char *createString(root_t *root) {
 int messageComplete(root_t *root) {
 
     node_t *aux = root->head;
-    int count = 0;
+    int count = aux->message->sequel;
 
     while(aux) {
         if(count != aux->message->sequel)
