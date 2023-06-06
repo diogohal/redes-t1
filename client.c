@@ -64,7 +64,7 @@ int main() {
     unsigned char *msg = NULL;
     char cmd[100];
     char saveCmd[100];
-    sockfd = rawSocketConnection("lo");
+    sockfd = rawSocketConnection("eno1");
     int command = -1; char dirPath[200]; char fileName[50];
     
     // Client running
@@ -88,7 +88,7 @@ int main() {
             strcpy(cmd, saveCmd);
             getFileName(fileName, cmd);
             // Send and close file
-            sendFile(file, fileName, sockfd);
+            sendFile(file, fileName, sockfd, 0);
             fclose(file);
         }
         // 2) Backup files inside folder

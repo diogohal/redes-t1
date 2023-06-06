@@ -10,15 +10,9 @@ protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char
     
     protocol_t *message = malloc(sizeof(protocol_t));
     
-    int bit = 0, size = strlen(data);
+    int size = strlen(data);
 
-    //alocate the init mark on the protocol
-    for (int i = 0; i < 8; i++) {
-        if (i == 0 || i == 7)
-            message->init_mark |= (0 << i);
-        else
-            message->init_mark |= (1 << i);
-    }
+    message->init_mark = 126;
 
 
     //alocate the size of the message on the protocol
@@ -31,22 +25,26 @@ protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char
     return message;
 }
 
-protocol_t **createMessageBuffer (unsigned char *msg, int bufferSize, unsigned char *fileName) {
+protocol_t **createMessageBuffer (unsigned char *msg, int bufferSize, unsigned char *fileName, int sequel) {
     
     char mensagem[DATA_SIZE];
 
     protocol_t **buf = malloc(sizeof(protocol_t) * (bufferSize));
     // First message is the backup type with it's filename
-    buf[0] = createMessage(0, 0, fileName);
-    // Last message is the ending file type
-    buf[bufferSize-1] = createMessage(bufferSize-1, 9, "");
+    buf[0] = createMessage(sequel, 0, fileName);
+    
+    sequel++;
 
     for (int j = 0; j < bufferSize-2; j++) {
         for (int i = 0; i < DATA_SIZE; i++) {
             mensagem[i] = msg[i + (j*DATA_SIZE)];
         }
-        buf[j+1] = createMessage(j+1, 8, mensagem);
+        buf[j+1] = createMessage((sequel++), 8, mensagem);
     }
+    
+    // Last message is the ending file type
+    buf[bufferSize-1] = createMessage(sequel, 9, "");
+
     return buf;
 }
 
@@ -153,8 +151,11 @@ void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize, int raw
 
         while (1) {
             recv(raw, &message, 67, 0);
-            if (message.init_mark == 126 && message.type == 14 && message.sequel == messageBuffer[i]->sequel) {
+            if (message.init_mark == 126 && message.type == 14 && i > 0) {
                 printf("ack recebido!\n");
+                break;
+            } else if (message.init_mark == 126 && message.type == 13 && i == 0) {
+                printf("OK recebido!\n");
                 break;
             }
         }
@@ -162,32 +163,36 @@ void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize, int raw
 
 }
 
-int sendACK(int raw, int sequel) {
+int sendResponse(int raw, int sequel, int type, unsigned char *data) {
     
     int result = 0;
     unsigned char buffer[67];
-    protocol_t *ack = createMessage(sequel, 14, "");
+    protocol_t *ack = createMessage(sequel, type, data);
     memcpy(buffer, ack, sizeof(protocol_t));
     result = send(raw, buffer, 67, 0);
     return result;
 
 }
 
-void sendFile(FILE *file, unsigned char *fileName, int sockfd) {
+int sendFile(FILE *file, unsigned char *fileName, int sockfd, int sequel) {
 
     unsigned char *msg = readArchive(file);
     int bufferSize = calcBufferSize(msg)+2;
-    protocol_t **messageBuffer = createMessageBuffer(msg, bufferSize, fileName);
+    protocol_t **messageBuffer = createMessageBuffer(msg, bufferSize, fileName, sequel);
     sendMessage(messageBuffer, sockfd, bufferSize, sockfd);
 
+    return sequel+bufferSize;
 }
 
 void sendDirectory(unsigned char *dirPath, int socket) {
 
     DIR *dirStream = opendir(dirPath);
     char filePath[100];
+    int sequel = 0;
     struct dirent *dirEntry = NULL;
     FILE *file = NULL;
+    sendResponse(socket, sequel, 1, dirPath);
+    sequel++;
     while((dirEntry = readdir(dirStream)) != NULL) {
         if(dirEntry->d_type == REGULAR_FILE) {
             strcpy(filePath, dirPath);
@@ -197,10 +202,12 @@ void sendDirectory(unsigned char *dirPath, int socket) {
             if(!file)
                 return;
             printf("\n\nEnviando %s\n", dirEntry->d_name);
-            sendFile(file, dirEntry->d_name, socket);
+            sequel = sendFile(file, dirEntry->d_name, socket, sequel);
+            printf("Arquivo enviado!!\n\n");
             fclose(file);
         }
     }
+    sendResponse(socket, sequel, 10, "");
     closedir(dirStream);
 
 }
