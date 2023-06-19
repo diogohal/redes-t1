@@ -5,59 +5,52 @@
 #include "fileHandler.h"
 
 // ---------- READ FUNCTIONS ----------
-unsigned char *readArchive(FILE *file) {
-
+unsigned char *readArchive(FILE *file, int* outFileSize) {
     int count = 0;
     while(fgetc(file) != EOF)
         count++;
-
+    *outFileSize = count;
+    
     rewind(file);
-    unsigned char *fileContent = malloc(sizeof(unsigned char)*count + 1);
+    unsigned char *fileContent = malloc(sizeof(unsigned char)*count);
     if(!fileContent)
         return NULL;
     
-    for(int i=0; i<count+1; i++)
-        fscanf(file, "%c", &fileContent[i]);
+    fread(fileContent, count, 1, file);
     
     return fileContent;
 
 }
 
 // ---------- WRITE FUNCTIONS ----------
-void writeFile(unsigned char *string, unsigned char *fileName) {
-
+void writeFile(unsigned char *string, unsigned char *fileName, int fileSize) {
     char filePath[200];
     strcpy(filePath, "./backup/");
     strcat(filePath, fileName);
     FILE *file = fopen(filePath, "w");
-
-    fprintf(file, "%s", string);
-
+    fwrite(string, fileSize, 1, file);
     fclose(file);
-
 }
 
-unsigned char *createString(root_t *root) {
-
-    unsigned char *string = malloc((root->count-1)*DATA_SIZE + strlen(root->tail->message->data));
-    string[0] = '\0';
+unsigned char *createString(root_t *root, int* outFileSize) {
+    unsigned char *string = malloc((root->count-1)*DATA_SIZE + root->tail->message->size);
     node_t *aux = root->head->next;
+    *outFileSize = 0;
     while(aux) {
-        strcat(string, aux->message->data);
+        memcpy(string + (*outFileSize), aux->message->data, aux->message->size);
+        *outFileSize += aux->message->size;
         aux = aux->next;
     }
-
     return string;
-
 }
 
 int messageComplete(root_t *root) {
 
     node_t *aux = root->head;
-    int count = aux->message->sequel;
+    int count = aux->sequel;
 
     while(aux) {
-        if(count != aux->message->sequel)
+        if(count != aux->sequel)
             return 0;
         else if(aux->message->type == 9)
             return 1;

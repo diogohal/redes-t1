@@ -18,6 +18,7 @@ typedef struct node {
     protocol_t *message;
     struct node *next;
     struct node *before;
+    int sequel;
 } node_t;
 
 typedef struct root {
@@ -26,9 +27,9 @@ typedef struct root {
     int count;
 } root_t;
 
-protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char *data);
+protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char *data, int size);
 
-protocol_t **createMessageBuffer (unsigned char *msg, int bufferSize, unsigned char *fileName);
+protocol_t **createMessageBuffer (unsigned char *msg, int fileSize, int bufferSize, unsigned char *fileName);
 
 void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize, int raw);
 
@@ -40,7 +41,7 @@ node_t *createNode(protocol_t *message);
 
 void addNode(root_t *root, node_t *node);
 
-int sendResponse(int raw, int sequel, int type, unsigned char *data);
+int sendResponse(int raw, int sequel, int type, unsigned char *data, int size);
 
 void sendFile(FILE *file, unsigned char *fileName, int sockfd);
 

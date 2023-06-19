@@ -29,11 +29,11 @@ int main() {
             printf("Recebi mensagem %d | data = %s\n", message.sequel, message.data);
             // Server-Client talk
             if(message.type == 0) {
-                sendResponse(server, 0, 13, "");
+                sendResponse(server, 0, 13, "", 0);
                 printf("OK ENVIADO!\n");
             }
             else if(message.type == 8) {
-                sendResponse(server, 0, 14, "");
+                sendResponse(server, 0, 14, "", 0);
                 printf("ACK ENVIADO!\n");
             }
             // Create a list of messages
@@ -45,7 +45,7 @@ int main() {
             printf("Recebendo Grupo de Arquivos\n");
             // Server-Client talk
             if(message.type == 1) {
-                sendResponse(server, 0, 13, "");
+                sendResponse(server, 0, 13, "", 0);
                 printf("OK ENVIADO!\n");
             }
 
@@ -56,11 +56,11 @@ int main() {
                     printf("Recebi mensagem %d | data = %s\n", message.sequel, message.data);
                     // Server-Client talk
                     if(message.type == 0) {
-                        sendResponse(server, 0, 13, "");
+                        sendResponse(server, 0, 13, "", 0);
                         printf("OK ENVIADO!\n");
                     }
                     else if(message.type == 8) {
-                        sendResponse(server, 0, 14, "");
+                        sendResponse(server, 0, 14, "", 0);
                         printf("ACK ENVIADO!\n");
                     }
                     else if(message.type == 10) {
