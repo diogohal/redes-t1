@@ -5,50 +5,40 @@
 #include "fileHandler.h"
 
 // ---------- READ FUNCTIONS ----------
-unsigned char *readArchive(FILE *file) {
-
-    int count = 0;
+unsigned char *readArchive(FILE *file, int* outFileSize) {
+    int fileSize = 0;
+    unsigned char *fileContent = NULL;
     while(fgetc(file) != EOF)
-        count++;
-
+        fileSize++;
     rewind(file);
-    unsigned char *fileContent = malloc(sizeof(unsigned char)*count + 1);
-    if(!fileContent)
-        return NULL;
-    
-    for(int i=0; i<count+1; i++)
-        fscanf(file, "%c", &fileContent[i]);
-    
+    fileContent = malloc(sizeof(unsigned char)*fileSize);
+    fread(fileContent, fileSize, 1, file);
+    fclose(file);
+    *outFileSize = fileSize;
     return fileContent;
-
 }
 
 // ---------- WRITE FUNCTIONS ----------
-void writeFile(unsigned char *string, unsigned char *fileName) {
-
+void writeFile(unsigned char *string, int size, unsigned char *fileName) {
     char filePath[200];
     strcpy(filePath, "./backup/");
     strcat(filePath, fileName);
     FILE *file = fopen(filePath, "w");
-
-    fprintf(file, "%s", string);
-
+    fwrite(string, size, 1, file);
     fclose(file);
-
 }
 
-unsigned char *createString(root_t *root) {
-
-    unsigned char *string = malloc((root->count-1)*DATA_SIZE + strlen(root->tail->message->data));
-    string[0] = '\0';
+unsigned char *createString(root_t *root, int* outFileSize) {
+    unsigned char *string = malloc((root->count-1)*DATA_SIZE + root->tail->before->message->size);
     node_t *aux = root->head->next;
+    *outFileSize = 0;
     while(aux) {
-        strcat(string, aux->message->data);
+        memcpy(string + (*outFileSize), aux->message->data, aux->message->size);
+        *outFileSize += aux->message->size;
         aux = aux->next;
     }
 
     return string;
-
 }
 
 int messageComplete(root_t *root) {
