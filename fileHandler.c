@@ -6,20 +6,16 @@
 
 // ---------- READ FUNCTIONS ----------
 unsigned char *readArchive(FILE *file, int* outFileSize) {
-    int count = 0;
+    int fileSize = 0;
+    unsigned char *fileContent = NULL;
     while(fgetc(file) != EOF)
-        count++;
-    *outFileSize = count;
-    
+        fileSize++;
     rewind(file);
-    unsigned char *fileContent = malloc(sizeof(unsigned char)*count);
-    if(!fileContent)
-        return NULL;
-    
-    fread(fileContent, count, 1, file);
-    
+    fileContent = malloc(sizeof(unsigned char)*fileSize);
+    fread(fileContent, fileSize, 1, file);
+    fclose(file);
+    *outFileSize = fileSize;
     return fileContent;
-
 }
 
 // ---------- WRITE FUNCTIONS ----------

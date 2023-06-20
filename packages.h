@@ -29,7 +29,7 @@ typedef struct root {
 
 protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char *data, int size);
 
-protocol_t **createMessageBuffer (unsigned char *msg, int fileSize, int bufferSize, unsigned char *fileName);
+protocol_t **createMessageBuffer (unsigned char *msg, int fileSize, int bufferSize, unsigned char *fileName, int sequel);
 
 void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize, int raw);
 
@@ -43,7 +43,7 @@ void addNode(root_t *root, node_t *node);
 
 int sendResponse(int raw, int sequel, int type, unsigned char *data, int size);
 
-void sendFile(FILE *file, unsigned char *fileName, int sockfd);
+int sendFile(FILE *file, unsigned char *fileName, int sockfd, int sequel);
 
 int receiveFileMessage(root_t *root, protocol_t message);
 

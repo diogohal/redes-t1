@@ -8,27 +8,24 @@
 
 protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char *data, int size) {
     protocol_t *message = malloc(sizeof(protocol_t));
-
-    // Inicialize variables
     message->init_mark = 126;
     message->size = size;
     message->sequel = sequel;
     message->type = type;
-    memcpy(message->data, data, DATA_SIZE);
+    memcpy(message->data, data, size);
     message->parity = 0;
 
     return message;
 }
 
-protocol_t **createMessageBuffer (unsigned char *msg, int fileSize, int bufferSize, unsigned char *fileName) {
+protocol_t **createMessageBuffer (unsigned char *msg, int fileSize, int bufferSize, unsigned char *fileName, int sequel) {
     
     char mensagem[DATA_SIZE];
 
     protocol_t **buf = malloc(sizeof(protocol_t) * (bufferSize));
     // First message is the backup type with it's filename
-    buf[0] = createMessage(0, 0, fileName, strlen(fileName)+1);
-    // Last message is the ending file type
-    buf[bufferSize-1] = createMessage(bufferSize-1, 9, "", 0);
+    buf[0] = createMessage(sequel, 0, fileName, strlen(fileName)+1);
+    sequel++;
 
     for (int j = 0; j < bufferSize-2; j++) {
         int c = 0;
@@ -36,14 +33,17 @@ protocol_t **createMessageBuffer (unsigned char *msg, int fileSize, int bufferSi
             mensagem[i] = msg[i + (j*DATA_SIZE)];
             c++;
         }
-        buf[j+1] = createMessage(j+1, 8, mensagem, c);
+        buf[j+1] = createMessage((sequel++), 8, mensagem, c);
     }
+    
+    // Last message is the ending file type
+    buf[bufferSize-1] = createMessage(sequel, 9, "", 0);
+
     return buf;
 }
 
 int calcBufferSize(int fileSize) {
     int bufferSize = 0;
-
     if (fileSize % DATA_SIZE == 0)
         bufferSize = fileSize / DATA_SIZE;
     else
@@ -141,8 +141,11 @@ void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize, int raw
 
         while (1) {
             recv(raw, &message, 67, 0);
-            if (message.init_mark == 126 && message.type == 14) {
+            if (message.init_mark == 126 && message.type == 14 && i > 0) {
                 printf("ack recebido!\n");
+                break;
+            } else if (message.init_mark == 126 && message.type == 13 && i == 0) {
+                printf("OK recebido!\n");
                 break;
             }
         }
@@ -151,31 +154,32 @@ void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize, int raw
 }
 
 int sendResponse(int raw, int sequel, int type, unsigned char *data, int size) {
-    
     int result = 0;
     unsigned char buffer[67];
     protocol_t *ack = createMessage(sequel, type, data, size);
     memcpy(buffer, ack, sizeof(protocol_t));
     result = send(raw, buffer, 67, 0);
     return result;
-
 }
 
-void sendFile(FILE *file, unsigned char *fileName, int sockfd) {
+int sendFile(FILE *file, unsigned char *fileName, int sockfd, int sequel) {
     int fileSize;
     unsigned char *msg = readArchive(file, &fileSize);
     int bufferSize = calcBufferSize(fileSize)+2;
-    protocol_t **messageBuffer = createMessageBuffer(msg, fileSize, bufferSize, fileName);
+    protocol_t **messageBuffer = createMessageBuffer(msg, fileSize, bufferSize, fileName, sequel);
     sendMessage(messageBuffer, sockfd, bufferSize, sockfd);
-
+    return sequel+bufferSize;
 }
 
 void sendDirectory(unsigned char *dirPath, int socket) {
 
     DIR *dirStream = opendir(dirPath);
     char filePath[100];
+    int sequel = 0;
     struct dirent *dirEntry = NULL;
     FILE *file = NULL;
+    sendResponse(socket, sequel, 1, dirPath, strlen(dirPath)+1);
+    sequel++;
     while((dirEntry = readdir(dirStream)) != NULL) {
         if(dirEntry->d_type == REGULAR_FILE) {
             strcpy(filePath, dirPath);
@@ -185,17 +189,18 @@ void sendDirectory(unsigned char *dirPath, int socket) {
             if(!file)
                 return;
             printf("\n\nEnviando %s\n", dirEntry->d_name);
-            sendFile(file, dirEntry->d_name, socket);
+            sequel = sendFile(file, dirEntry->d_name, socket, sequel);
+            printf("Arquivo enviado!!\n\n");
             fclose(file);
         }
     }
+    sendResponse(socket, sequel, 10, "", 0);
     closedir(dirStream);
 
 }
 
 // ---------- RECEIVING FUNCTIONS ----------
 int receiveFileMessage(root_t *root, protocol_t message) {
-
     int sequel = 0;
     if(root->tail && root->tail->sequel >= 63)
         sequel = root->tail->sequel + 1;

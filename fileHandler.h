@@ -1,6 +1,7 @@
 #ifndef FILE_HANDLER_H
 #define FILE_HANDLER_H
 #include <stdio.h>
+#include <ctype.h>
 #include "packages.h"
 
 unsigned char *readArchive(FILE *file, int* outFileSize);
