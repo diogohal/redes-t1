@@ -18,7 +18,6 @@ typedef struct node {
     protocol_t *message;
     struct node *next;
     struct node *before;
-    int sequel;
 } node_t;
 
 typedef struct root {
@@ -30,7 +29,6 @@ typedef struct root {
 protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char *data, int size);
 
 protocol_t **createMessageBuffer (unsigned char *msg, int fileSize, int bufferSize, unsigned char *fileName, int sequel);
-
 void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize, int raw);
 
 void printBuff (protocol_t **buf, int bufferSize);

@@ -9,6 +9,7 @@
 protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char *data, int size) {
     protocol_t *message = malloc(sizeof(protocol_t));
     message->init_mark = 126;
+    //alocate the size of the message on the protocol
     message->size = size;
     message->sequel = sequel;
     message->type = type;
@@ -25,6 +26,7 @@ protocol_t **createMessageBuffer (unsigned char *msg, int fileSize, int bufferSi
     protocol_t **buf = malloc(sizeof(protocol_t) * (bufferSize));
     // First message is the backup type with it's filename
     buf[0] = createMessage(sequel, 0, fileName, strlen(fileName)+1);
+    
     sequel++;
 
     for (int j = 0; j < bufferSize-2; j++) {
@@ -50,6 +52,7 @@ int calcBufferSize(int fileSize) {
         bufferSize = fileSize/DATA_SIZE + 1;
 
     return bufferSize;
+
 }
 
 void printBuff (protocol_t **buf, int bufferSize) {
@@ -82,7 +85,6 @@ node_t *createNode(protocol_t *message) {
     node->message = message;
     node->before = NULL;
     node->next = NULL;
-    node->sequel = 0;
 
     return node;
 
@@ -95,19 +97,19 @@ void addNode(root_t *root, node_t *node) {
         root->head = node;
         root->tail = node;
     }
-    else if(node->sequel < root->head->sequel) {
+    else if(node->message->sequel < root->head->message->sequel) {
         node->next = root->head;
         root->head->before = node;
         root->head = node;
     }
-    else if(node->sequel > root->tail->sequel) {
+    else if(node->message->sequel > root->tail->message->sequel) {
         root->tail->next = node;
         node->before = root->tail; 
         root->tail = node;
     }
     else {
         while(aux) {
-            if(node->sequel < aux->sequel) {
+            if(node->message->sequel < aux->message->sequel) {
                 node->next = aux;
                 node->before = aux->before;
                 node->before->next = node;
@@ -115,11 +117,12 @@ void addNode(root_t *root, node_t *node) {
                 break;
             }
             // bug treatment for loopback
-            else if(node->sequel == aux->sequel)
+            else if(node->message->sequel == aux->message->sequel)
                 return;
             aux = aux->next; 
         }
     }
+
     root->count++;
 
 }
@@ -201,23 +204,17 @@ void sendDirectory(unsigned char *dirPath, int socket) {
 
 // ---------- RECEIVING FUNCTIONS ----------
 int receiveFileMessage(root_t *root, protocol_t message) {
-    int sequel = 0;
-    if(root->tail && root->tail->sequel >= 63)
-        sequel = root->tail->sequel + 1;
-    else
-        sequel = message.sequel;
-    protocol_t *auxMessage = createMessage(sequel, message.type, message.data, message.size);
-    node_t *auxNode = createNode(auxMessage);
-    auxNode->sequel = sequel;
-    addNode(root, auxNode);
 
-    printf("SEQUENCIA ADICIONADA = %d\n", sequel);
+    protocol_t *auxMessage = createMessage(message.sequel, message.type, message.data, message.size);
+    node_t *auxNode = createNode(auxMessage);
+    printf("debugggg\n");
+    addNode(root, auxNode);
 
     // Check for message ending. Needs a timestamp
     if(messageComplete(root)) {
-        int fileSize = 0;
+        int fileSize;
         unsigned char *msg = createString(root, &fileSize);
-        writeFile(msg, root->head->message->data, fileSize);
+        writeFile(msg, fileSize, root->head->message->data);
         destroyNodes(root);
         printf("Arquivo escrito!\n");
         return 1;
@@ -238,8 +235,7 @@ void destroyNodes(root_t *root) {
         free(del->message);
         free(del);
     }
-    root->head = NULL;
-    root->tail = NULL;
+    
     root->count = 0;
 
 }
