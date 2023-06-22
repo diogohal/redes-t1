@@ -1,8 +1,7 @@
 # TAREFAS
 
 ## Enviar grupo de arquivos
-
-## Implementar timeout
+## Arquivo binário
 ## Recuperar backup
 ## Implementar NACK
 ## Implementar erros
