@@ -13,7 +13,6 @@ unsigned char *readArchive(FILE *file, int* outFileSize) {
     rewind(file);
     fileContent = malloc(sizeof(unsigned char)*fileSize);
     fread(fileContent, fileSize, 1, file);
-    fclose(file);
     *outFileSize = fileSize;
     return fileContent;
 }
@@ -41,10 +40,8 @@ unsigned char *createString(root_t *root, int* outFileSize) {
 }
 
 int messageComplete(root_t *root) {
-
     node_t *aux = root->head;
     int count = aux->sequel;
-
     while(aux) {
         if(count != aux->sequel)
             return 0;
@@ -53,7 +50,5 @@ int messageComplete(root_t *root) {
         aux = aux->next;
         count++;
     }
-
     return 0;
-
 }

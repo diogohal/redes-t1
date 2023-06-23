@@ -14,19 +14,15 @@ protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char
     message->type = type;
     memcpy(message->data, data, size);
     message->parity = 0;
-
     return message;
 }
 
 protocol_t **createMessageBuffer (unsigned char *msg, int fileSize, int bufferSize, unsigned char *fileName, int sequel) {
-    
     char mensagem[DATA_SIZE];
-
     protocol_t **buf = malloc(sizeof(protocol_t) * (bufferSize));
     // First message is the backup type with it's filename
     buf[0] = createMessage(sequel, 0, fileName, strlen(fileName)+1);
     sequel++;
-
     for (int j = 0; j < bufferSize-2; j++) {
         int c = 0;
         for (int i = 0; i < DATA_SIZE; i++) if (i + (j*DATA_SIZE) < fileSize) {
@@ -35,10 +31,8 @@ protocol_t **createMessageBuffer (unsigned char *msg, int fileSize, int bufferSi
         }
         buf[j+1] = createMessage((sequel++), 8, mensagem, c);
     }
-    
     // Last message is the ending file type
     buf[bufferSize-1] = createMessage(sequel, 9, "", 0);
-
     return buf;
 }
 
@@ -48,7 +42,6 @@ int calcBufferSize(int fileSize) {
         bufferSize = fileSize / DATA_SIZE;
     else
         bufferSize = fileSize/DATA_SIZE + 1;
-
     return bufferSize;
 }
 
@@ -58,38 +51,28 @@ void printBuff (protocol_t **buf, int bufferSize) {
     }
 }
 
-
 root_t *createRoot() {
-
     root_t *root = malloc(sizeof(root_t));
     if(!root)
         return NULL;
-    
     root->head = NULL;
     root->tail = NULL;
     root->count = 0;
-
     return root;
-
 }
 
 node_t *createNode(protocol_t *message) {
-
     node_t *node = malloc(sizeof(node_t));
     if(!node)
         return NULL;
-    
     node->message = message;
     node->before = NULL;
     node->next = NULL;
     node->sequel = 0;
-
     return node;
-
 }
 
 void addNode(root_t *root, node_t *node) {
-
     node_t *aux = root->head;
     if(!aux) {
         root->head = node;
@@ -121,24 +104,19 @@ void addNode(root_t *root, node_t *node) {
         }
     }
     root->count++;
-
 }
 
 // ---------- SEND FUNCTIONS ----------
 void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize, int raw) {
-
     unsigned char buffer[67];
     protocol_t message;
-
     for(int i = 0; i < bufferSize; i++) {
         memcpy(buffer, messageBuffer[i], sizeof(protocol_t));
         send(socket, buffer, 67, 0);
         printf("Mensagem enviada!\n");
-        
         // Doesn't need to wait for ack response
         if(i == bufferSize-1)
             return;
-
         while (1) {
             recv(raw, &message, 67, 0);
             if (message.init_mark == 126 && message.type == 14 && i > 0) {
@@ -150,7 +128,6 @@ void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize, int raw
             }
         }
     }
-
 }
 
 int sendResponse(int raw, int sequel, int type, unsigned char *data, int size) {
@@ -172,7 +149,6 @@ int sendFile(FILE *file, unsigned char *fileName, int sockfd, int sequel) {
 }
 
 void sendDirectory(unsigned char *dirPath, int socket) {
-
     DIR *dirStream = opendir(dirPath);
     char filePath[100];
     int sequel = 0;
@@ -196,7 +172,6 @@ void sendDirectory(unsigned char *dirPath, int socket) {
     }
     sendResponse(socket, sequel, 10, "", 0);
     closedir(dirStream);
-
 }
 
 // ---------- RECEIVING FUNCTIONS ----------
@@ -210,9 +185,7 @@ int receiveFileMessage(root_t *root, protocol_t message) {
     node_t *auxNode = createNode(auxMessage);
     auxNode->sequel = sequel;
     addNode(root, auxNode);
-
     printf("SEQUENCIA ADICIONADA = %d\n", sequel);
-
     // Check for message ending. Needs a timestamp
     if(messageComplete(root)) {
         int fileSize = 0;
@@ -223,13 +196,10 @@ int receiveFileMessage(root_t *root, protocol_t message) {
         return 1;
     }
     return 0;
-
 }
-
 
 // ---------- DESTROY FUNCTIONS ----------
 void destroyNodes(root_t *root) {
-
     node_t *aux = root->head;
     node_t *del = NULL;
     while(aux) {
@@ -241,5 +211,4 @@ void destroyNodes(root_t *root) {
     root->head = NULL;
     root->tail = NULL;
     root->count = 0;
-
 }
