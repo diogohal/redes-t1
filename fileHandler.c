@@ -13,23 +13,22 @@ unsigned char *readArchive(FILE *file, int* outFileSize) {
     rewind(file);
     fileContent = malloc(sizeof(unsigned char)*fileSize);
     fread(fileContent, fileSize, 1, file);
-    fclose(file);
     *outFileSize = fileSize;
     return fileContent;
 }
 
 // ---------- WRITE FUNCTIONS ----------
-void writeFile(unsigned char *string, int size, unsigned char *fileName) {
+void writeFile(unsigned char *string, unsigned char *fileName, int fileSize) {
     char filePath[200];
     strcpy(filePath, "./backup/");
     strcat(filePath, fileName);
     FILE *file = fopen(filePath, "w");
-    fwrite(string, size, 1, file);
+    fwrite(string, fileSize, 1, file);
     fclose(file);
 }
 
 unsigned char *createString(root_t *root, int* outFileSize) {
-    unsigned char *string = malloc((root->count-1)*DATA_SIZE + root->tail->before->message->size);
+    unsigned char *string = malloc((root->count-1)*DATA_SIZE + root->tail->message->size);
     node_t *aux = root->head->next;
     *outFileSize = 0;
     while(aux) {
@@ -37,24 +36,19 @@ unsigned char *createString(root_t *root, int* outFileSize) {
         *outFileSize += aux->message->size;
         aux = aux->next;
     }
-
     return string;
 }
 
 int messageComplete(root_t *root) {
-
     node_t *aux = root->head;
-    int count = 0;
-
+    int count = aux->sequel;
     while(aux) {
-        if(count != aux->message->sequel)
+        if(count != aux->sequel)
             return 0;
         else if(aux->message->type == 9)
             return 1;
         aux = aux->next;
         count++;
     }
-
     return 0;
-
 }
