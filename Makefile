@@ -24,7 +24,6 @@ runc: client
 
 runs: server
 	clear
-	rm -f backup/*
 	./server
 
 clean:
