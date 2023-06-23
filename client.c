@@ -13,10 +13,13 @@ void getCommand(int *command, char *input) {
     char *token = NULL;
     token = strtok(input, " ");
     token[strcspn(token, "\n")] = '\0';
+    printf("token:%s\n", token);
     if(!strcmp(token, "backup"))
         *command = 0;
     else if(!strcmp(token, "backupdir"))
         *command = 1;
+    else if(!strcmp(token, "rec-backup"))
+        *command = 2;
     else if(!strcmp(token, "exit"))
         *command = -1;
     else
@@ -35,19 +38,28 @@ void getDirPath(char *dirPath, char *input) {
     }
 }
 
-void getFileName(char *fileName, char *input) {
+void getFileName(char *fileName, char *input, int op) {
 
     char *token = NULL;
-    token = strtok(input, "/");
-    while(token) {
-        strcpy(fileName, token);
-        fileName[strcspn(fileName, "\n")] = '\0';
-        token = strtok(NULL, "/");
+    
+    if (op == 0) {
+        token = strtok(input, "/");
+        while(token) {
+            strcpy(fileName, token);
+            fileName[strcspn(fileName, "\n")] = '\0';
+            token = strtok(NULL, "/");
+        }
     }
 
+    else if (op == 1) {
+        token = strtok(input, " ");
+        token = strtok(NULL, " ");
+        strcpy(fileName, token);
+        fileName[strcspn(fileName, "\n")] = '\0';
+    }
 }
 
-int main() {
+int main(int argc, char** argv) {
 
     // Variables and structs used in the client
     int sockfd = 0;
@@ -58,7 +70,9 @@ int main() {
     struct dirent *dirEntry = NULL;
     FILE *file = NULL;
     size_t fileSize;
+    protocol_t message;
     protocol_t **messageBuffer = NULL;
+    root_t *root = createRoot();
     int running = 1;
     int count = 0;
     unsigned char *msg = NULL;
@@ -71,9 +85,12 @@ int main() {
     while (running) {
         // ----- Get terminal command -----
         command = -2;
+        cmd[0] = '\0';
+        saveCmd[0] = '\0';
         fgets(cmd, sizeof(cmd), stdin);
         strcpy(saveCmd, cmd);
         getCommand(&command, cmd);
+        printf("cmd %d\n", command);
         strcpy(cmd, saveCmd);
         // ----- Commands execution -----
         // 1) 1 file backup
@@ -86,7 +103,7 @@ int main() {
             }
             // Get fileName and it's content
             strcpy(cmd, saveCmd);
-            getFileName(fileName, cmd);
+            getFileName(fileName, cmd, 0);
             // Send and close file
             sendFile(file, fileName, sockfd, 0);
             fclose(file);
@@ -100,6 +117,47 @@ int main() {
                 continue;
             }
             sendDirectory(dirPath, sockfd);
+        }
+        // 3) One file backup recover
+        else if(command == 2) {
+            getFileName(fileName, cmd, 1);
+            sendResponse(sockfd, 0, 2, fileName, strlen(fileName));
+
+            while (1) {
+                printf("Entrou no while!!\n");
+                recv(sockfd, &message, 67, 0);
+
+                if(message.init_mark == 126 && message.type == 12) {
+                    printf("Entrou no erro!!\n");
+                    if (!strcmp(message.data, "0"))
+                        printf("O Disco está cheio!\n");
+                    else if (!strcmp(message.data, "1"))
+                        printf("Sem permissão de escrita para o arquivo!\n");
+                    else if (!strcmp(message.data, "2"))
+                        printf("Arquivo inexistente!\n");
+                    else if (!strcmp(message.data, "3"))
+                        printf("Sem permissão de leitura para o arquivo!\n");
+                    break;
+                }
+                // ----- File -----
+                if(message.init_mark == 126 && (message.type == 0 || message.type == 9 || message.type == 8)) {
+                    printf("Recebi mensagem %d | data = %s\n", message.sequel, message.data);
+                    // Server-Client talk
+                    if(message.type == 0) {
+                        sendResponse(sockfd, 0, 13, "", 0);
+                        printf("OK ENVIADO!\n");
+                    }
+                    else if(message.type == 8) {
+                        sendResponse(sockfd, 0, 14, "", 0);
+                        printf("ACK ENVIADO!\n");
+                    }
+                    // Create a list of messages
+                    if (receiveFileMessage(root, message))
+                        break;
+                }
+            }
+
+
         }
 
         // 0) Exit
