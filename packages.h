@@ -51,8 +51,6 @@ int sendFile(FILE *file, unsigned char *fileName, int sockfd, int sequel);
 
 int receiveFileMessage(root_t *root, protocol_t message);
 
-void sendDirectory(unsigned char *dirPath, int socket);
-
 void destroyNodes(root_t *root);
 
 void sendGroupFiles(unsigned char *groupFiles, int socket);

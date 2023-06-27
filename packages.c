@@ -136,24 +136,6 @@ void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize, int raw
     }
 }
 
-int sendResponse(int raw, int sequel, int type, unsigned char *data, int size) {
-    int result = 0;
-    unsigned char buffer[PROTOCOL_SIZE];
-    protocol_t *ack = createMessage(sequel, type, data, size);
-    memcpy(buffer, ack, sizeof(protocol_t));
-    result = send(raw, buffer, PROTOCOL_SIZE, 0);
-    return result;
-}
-
-int sendFile(FILE *file, unsigned char *fileName, int sockfd, int sequel) {
-    int fileSize;
-    unsigned char *msg = readArchive(file, &fileSize);
-    int bufferSize = calcBufferSize(fileSize)+2;
-    protocol_t **messageBuffer = createMessageBuffer(msg, fileSize, bufferSize, fileName, sequel);
-    sendMessage(messageBuffer, sockfd, bufferSize, sockfd);
-    return sequel+bufferSize;
-}
-
 // Send group files
 void sendGroupFiles(unsigned char *groupFiles, int socket) {
     // Glob setting
@@ -195,6 +177,24 @@ void sendGroupFiles(unsigned char *groupFiles, int socket) {
         fclose(file);
     }
     sendResponse(socket, sequel, 10, "", 0);
+}
+
+int sendResponse(int raw, int sequel, int type, unsigned char *data, int size) {
+    int result = 0;
+    unsigned char buffer[PROTOCOL_SIZE];
+    protocol_t *ack = createMessage(sequel, type, data, size);
+    memcpy(buffer, ack, sizeof(protocol_t));
+    result = send(raw, buffer, PROTOCOL_SIZE, 0);
+    return result;
+}
+
+int sendFile(FILE *file, unsigned char *fileName, int sockfd, int sequel) {
+    int fileSize;
+    unsigned char *msg = readArchive(file, &fileSize);
+    int bufferSize = calcBufferSize(fileSize)+2;
+    protocol_t **messageBuffer = createMessageBuffer(msg, fileSize, bufferSize, fileName, sequel);
+    sendMessage(messageBuffer, sockfd, bufferSize, sockfd);
+    return sequel+bufferSize;
 }
 
 // ---------- RECEIVING FUNCTIONS ----------
