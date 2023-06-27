@@ -1,1 +1,1 @@
-dois
+printf("Recebi mensagem %d | data = %s | type = %d\n", message.sequel, message.data, message.type);

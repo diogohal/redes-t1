@@ -1,0 +1,42 @@
+// Send group files
+void sendGroupFiles(unsigned char *groupFiles, int socket) {
+    // Glob setting
+    char **found;
+    glob_t gstruct;
+    int r;
+    r = glob(groupFiles, GLOB_ERR, NULL, &gstruct);
+    if(r != 0) {
+        printf("Não encontrou nada!\n");
+        return;
+    }
+    found = gstruct.gl_pathv;
+
+    // Variables setting
+    int sequel = 0;
+    FILE *file = NULL;
+    sendResponse(socket, sequel, 1, "", 0);
+    sequel++;
+    char filePath[100];
+    char fileName[100];
+    char *token;
+
+    // Send each found
+    while(*found) {
+        strcpy(filePath, *found);
+        file = fopen(filePath, "r");
+        if(!file)
+            return;
+        // Get file name
+        token = strtok(filePath, "/");
+        while(token != NULL) {
+            strcpy(fileName, token);
+            token = strtok(NULL, "/");
+        }
+        printf("\n\nEnviando %s\n", *found);
+        sequel = sendFile(file, fileName, socket, sequel);
+        printf("Arquivo enviado!!\n\n");
+        found++;
+        fclose(file);
+    }
+    sendResponse(socket, sequel, 10, "", 0);
+}

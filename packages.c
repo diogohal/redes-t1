@@ -1,10 +1,18 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <glob.h>
+#include <string.h>
 #include "packages.h"
-#include <dirent.h>
 #include "string.h"
 #include "rawSocketConnection.h"
 #include "fileHandler.h"
+
+unsigned int calculateParity(protocol_t *message) {
+    unsigned int parity = 0;
+    for(int i=0; i<message->size; i++)
+        parity ^= message->data[i];
+    return parity;
+}
 
 protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char *data, int size) {
     protocol_t *message = malloc(sizeof(protocol_t));
@@ -13,7 +21,7 @@ protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char
     message->sequel = sequel;
     message->type = type;
     memcpy(message->data, data, size);
-    message->parity = 0;
+    message->parity = calculateParity(message);
     return message;
 }
 
@@ -43,12 +51,6 @@ int calcBufferSize(int fileSize) {
     else
         bufferSize = fileSize/DATA_SIZE + 1;
     return bufferSize;
-}
-
-void printBuff (protocol_t **buf, int bufferSize) {
-    for (int i = 0; i < bufferSize; i++) {
-        printf("sequel = %d | type = %d | data = %s\n", buf[i]->sequel, buf[i]->type, buf[i]->data);
-    }
 }
 
 root_t *createRoot() {
@@ -108,34 +110,38 @@ void addNode(root_t *root, node_t *node) {
 
 // ---------- SEND FUNCTIONS ----------
 void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize, int raw) {
-    unsigned char buffer[67];
+    unsigned char buffer[PROTOCOL_SIZE];
     protocol_t message;
+    ssize_t recvReturn;
     for(int i = 0; i < bufferSize; i++) {
         memcpy(buffer, messageBuffer[i], sizeof(protocol_t));
-        send(socket, buffer, 67, 0);
-        printf("Mensagem enviada!\n");
+        send(socket, buffer, PROTOCOL_SIZE, 0);
         // Doesn't need to wait for ack response
         if(i == bufferSize-1)
             return;
         while (1) {
-            recv(raw, &message, 67, 0);
-            if (message.init_mark == 126 && message.type == 14 && i > 0) {
-                printf("ack recebido!\n");
-                break;
-            } else if (message.init_mark == 126 && message.type == 13 && i == 0) {
-                printf("OK recebido!\n");
-                break;
+            recvReturn = recv(raw, &message, PROTOCOL_SIZE, 0);
+            if(recvReturn == -1) {
+                printf("Timeout! Esperando 2 segundos...\n");
+                send(socket, buffer, PROTOCOL_SIZE, 0);
+                continue;
             }
+            if (message.init_mark == 126 && message.type == 14 && i > 0)
+                break;
+            else if (message.init_mark == 126 && message.type == 13 && i == 0)
+                break;
+            else if (message.init_mark == 126 && message.type == 15)
+                send(socket, buffer, PROTOCOL_SIZE, 0);
         }
     }
 }
 
 int sendResponse(int raw, int sequel, int type, unsigned char *data, int size) {
     int result = 0;
-    unsigned char buffer[67];
+    unsigned char buffer[PROTOCOL_SIZE];
     protocol_t *ack = createMessage(sequel, type, data, size);
     memcpy(buffer, ack, sizeof(protocol_t));
-    result = send(raw, buffer, 67, 0);
+    result = send(raw, buffer, PROTOCOL_SIZE, 0);
     return result;
 }
 
@@ -148,36 +154,53 @@ int sendFile(FILE *file, unsigned char *fileName, int sockfd, int sequel) {
     return sequel+bufferSize;
 }
 
-void sendDirectory(unsigned char *dirPath, int socket) {
-    DIR *dirStream = opendir(dirPath);
-    char filePath[100];
+// Send group files
+void sendGroupFiles(unsigned char *groupFiles, int socket) {
+    // Glob setting
+    char **found;
+    glob_t gstruct;
+    int r;
+    r = glob(groupFiles, GLOB_ERR, NULL, &gstruct);
+    if(r != 0) {
+        printf("Não encontrou nada!\n");
+        return;
+    }
+    found = gstruct.gl_pathv;
+
+    // Variables setting
     int sequel = 0;
-    struct dirent *dirEntry = NULL;
     FILE *file = NULL;
-    sendResponse(socket, sequel, 1, dirPath, strlen(dirPath)+1);
+    sendResponse(socket, sequel, 1, "", 0);
     sequel++;
-    while((dirEntry = readdir(dirStream)) != NULL) {
-        if(dirEntry->d_type == REGULAR_FILE) {
-            strcpy(filePath, dirPath);
-            strcat(filePath, "/");
-            strcat(filePath, dirEntry->d_name);
-            file = fopen(filePath, "r");
-            if(!file)
-                return;
-            printf("\n\nEnviando %s\n", dirEntry->d_name);
-            sequel = sendFile(file, dirEntry->d_name, socket, sequel);
-            printf("Arquivo enviado!!\n\n");
-            fclose(file);
+    char filePath[100];
+    char fileName[100];
+    char *token;
+
+    // Send each found
+    while(*found) {
+        strcpy(filePath, *found);
+        file = fopen(filePath, "rb");
+        if(!file)
+            return;
+        // Get file name
+        token = strtok(filePath, "/");
+        while(token != NULL) {
+            strcpy(fileName, token);
+            token = strtok(NULL, "/");
         }
+        printf("Enviando %s\n", *found);
+        sequel = sendFile(file, fileName, socket, sequel);
+        printf("Arquivo enviado!!\n\n");
+        found++;
+        fclose(file);
     }
     sendResponse(socket, sequel, 10, "", 0);
-    closedir(dirStream);
 }
 
 // ---------- RECEIVING FUNCTIONS ----------
 int receiveFileMessage(root_t *root, protocol_t message) {
     int sequel = 0;
-    if(root->tail && root->tail->sequel >= 63)
+    if(root->tail && root->tail->sequel >= DATA_SIZE)
         sequel = root->tail->sequel + 1;
     else
         sequel = message.sequel;
@@ -185,14 +208,13 @@ int receiveFileMessage(root_t *root, protocol_t message) {
     node_t *auxNode = createNode(auxMessage);
     auxNode->sequel = sequel;
     addNode(root, auxNode);
-    printf("SEQUENCIA ADICIONADA = %d\n", sequel);
     // Check for message ending. Needs a timestamp
     if(messageComplete(root)) {
         int fileSize = 0;
         unsigned char *msg = createString(root, &fileSize);
         writeFile(msg, root->head->message->data, fileSize);
+        printf("Arquivo %s escrito!\n", root->head->message->data);
         destroyNodes(root);
-        printf("Arquivo escrito!\n");
         return 1;
     }
     return 0;

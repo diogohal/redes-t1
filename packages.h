@@ -1,15 +1,17 @@
 #ifndef PACKAGES_H
 #define PACKAGES_H
 #define DATA_SIZE 63
+#define PROTOCOL_SIZE 67
 #define REGULAR_FILE 8
 #define REGULAR_FOLDER 4
+#include <dirent.h>
 
 struct protocol {
     unsigned int init_mark : 8;
     unsigned int size : 6;
     unsigned int sequel : 6;
     unsigned int type : 4;
-    unsigned char data[63] ;
+    unsigned char data[DATA_SIZE];
     unsigned int parity : 8;
 }; typedef struct protocol protocol_t;
 
@@ -26,6 +28,8 @@ typedef struct root {
     node_t *tail;
     int count;
 } root_t;
+
+unsigned int calculateParity(protocol_t *message);
 
 protocol_t *createMessage (unsigned int sequel, unsigned int type, unsigned char *data, int size);
 
@@ -50,5 +54,7 @@ int receiveFileMessage(root_t *root, protocol_t message);
 void sendDirectory(unsigned char *dirPath, int socket);
 
 void destroyNodes(root_t *root);
+
+void sendGroupFiles(unsigned char *groupFiles, int socket);
 
 #endif

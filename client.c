@@ -2,8 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <errno.h>
 #include <dirent.h>
+#include <glob.h>
 #include "rawSocketConnection.h"
 #include "fileHandler.h"
 #include "packages.h"
@@ -13,13 +15,14 @@ void getCommand(int *command, char *input) {
     char *token = NULL;
     token = strtok(input, " ");
     token[strcspn(token, "\n")] = '\0';
-    printf("token:%s\n", token);
     if(!strcmp(token, "backup"))
         *command = 0;
-    else if(!strcmp(token, "backupdir"))
+    else if(!strcmp(token, "backupg"))
         *command = 1;
     else if(!strcmp(token, "rec-backup"))
         *command = 2;
+    else if(!strcmp(token, "rec-backupg"))
+        *command = 3;
     else if(!strcmp(token, "exit"))
         *command = -1;
     else
@@ -78,22 +81,33 @@ int main(int argc, char** argv) {
     unsigned char *msg = NULL;
     char cmd[100];
     char saveCmd[100];
+    int command = -1; char dirPath[200]; char fileName[50]; char groupPath[50];
+    unsigned int parity = 0;
     sockfd = rawSocketConnection("eno1");
-    int command = -1; char dirPath[200]; char fileName[50];
-    
+    // Timeout setting
+    struct timeval timeout;
+    timeout.tv_sec = 2;
+    timeout.tv_usec = 0;
+    if(setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout))) {
+        printf("Erro ao abrir o socket!\n");
+        exit(1);
+    }
+
+    ssize_t recvReturn;
     // Client running
     while (running) {
         // ----- Get terminal command -----
         command = -2;
         cmd[0] = '\0';
         saveCmd[0] = '\0';
+        dirPath[0] = '\0';
+        printf("Comando: ");
         fgets(cmd, sizeof(cmd), stdin);
         strcpy(saveCmd, cmd);
         getCommand(&command, cmd);
-        printf("cmd %d\n", command);
         strcpy(cmd, saveCmd);
         // ----- Commands execution -----
-        // 1) 1 file backup
+        // 0) backup
         if (command == 0) {
             getDirPath(dirPath, cmd);
             file = fopen(dirPath, "rb");
@@ -105,28 +119,27 @@ int main(int argc, char** argv) {
             strcpy(cmd, saveCmd);
             getFileName(fileName, cmd, 0);
             // Send and close file
+            printf("Enviando arquivo %s\n", fileName);
             sendFile(file, fileName, sockfd, 0);
+            printf("Arquivo enviado!\n");
             fclose(file);
         }
-        // 2) Backup files inside folder
+        // 1) backupg
         else if(command == 1) {
             getDirPath(dirPath, cmd);
-            dirStream = opendir(dirPath);
-            if(!dirStream) {
-                printf("Diretório inexistente!\n");
-                continue;
-            }
-            sendDirectory(dirPath, sockfd);
+            sendGroupFiles(dirPath, sockfd);
         }
-        // 3) One file backup recover
+        // 2) rec-backup
         else if(command == 2) {
             getFileName(fileName, cmd, 1);
             sendResponse(sockfd, 0, 2, fileName, strlen(fileName));
 
             while (1) {
-                printf("Entrou no while!!\n");
-                recv(sockfd, &message, 67, 0);
-
+                recvReturn = recv(sockfd, &message, PROTOCOL_SIZE, 0);
+                if(recvReturn == -1) {
+                    printf("Timeout! Esperando 2 segundos...");
+                    continue;
+                }     
                 if(message.init_mark == 126 && message.type == 12) {
                     printf("Entrou no erro!!\n");
                     if (!strcmp(message.data, "0"))
@@ -140,26 +153,45 @@ int main(int argc, char** argv) {
                     break;
                 }
                 // ----- File -----
-                if(message.init_mark == 126 && (message.type == 0 || message.type == 9 || message.type == 8)) {
-                    printf("Recebi mensagem %d | data = %s\n", message.sequel, message.data);
+                if(message.init_mark == 126 && (message.type == 0 || message.type == 9 || message.type == 8)) {                  
                     // Server-Client talk
-                    if(message.type == 0) {
+                    if(message.type == 0)
                         sendResponse(sockfd, 0, 13, "", 0);
-                        printf("OK ENVIADO!\n");
-                    }
-                    else if(message.type == 8) {
+                    else if(message.type == 8)
                         sendResponse(sockfd, 0, 14, "", 0);
-                        printf("ACK ENVIADO!\n");
-                    }
                     // Create a list of messages
                     if (receiveFileMessage(root, message))
                         break;
                 }
             }
-
-
+            // rec-backupdir
+        } 
+        // 3) rec-backupg
+        else if (command == 3) {
+            getDirPath(dirPath, cmd);
+            strcpy(groupPath, "./backup/");
+            strcat(groupPath, dirPath);
+            sendResponse(sockfd, 0, 3, groupPath, strlen(groupPath)+1);
+            while(1) {
+                recvReturn = recv(sockfd, &message, PROTOCOL_SIZE, 0);
+                if(recvReturn == -1) {
+                    printf("Timeout! Esperando 2 segundos...");
+                    continue;
+                }           
+                // File
+                if(message.init_mark == 126 && (message.type == 0 || message.type == 9 || message.type == 8 || message.type == 10)) {
+                    // Server-Client talk
+                    if(message.type == 0)
+                        sendResponse(sockfd, 0, 13, "", 0);
+                    else if(message.type == 8)
+                        sendResponse(sockfd, 0, 14, "", 0);
+                    else if(message.type == 10)
+                        break;
+                    // Create a list of messages
+                    receiveFileMessage(root, message);
+                }
+            }
         }
-
         // 0) Exit
         else if (command == -1)
             running = 0;

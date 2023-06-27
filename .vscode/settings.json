@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "filehandler.h": "c"
+        "filehandler.h": "c",
+        "rawsocketconnection.h": "c",
+        "stdio.h": "c"
     }
 }

@@ -22,7 +22,7 @@ void writeFile(unsigned char *string, unsigned char *fileName, int fileSize) {
     char filePath[200];
     strcpy(filePath, "./backup/");
     strcat(filePath, fileName);
-    FILE *file = fopen(filePath, "w");
+    FILE *file = fopen(filePath, "wb");
     fwrite(string, fileSize, 1, file);
     fclose(file);
 }
