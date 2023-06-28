@@ -78,6 +78,7 @@ int main(int argc, char** argv) {
     root_t *root = createRoot();
     int running = 1;
     int count = 0;
+    int nackCount = 0;
     unsigned char *msg = NULL;
     char cmd[100];
     char saveCmd[100];
@@ -137,7 +138,7 @@ int main(int argc, char** argv) {
             while (1) {
                 recvReturn = recv(sockfd, &message, PROTOCOL_SIZE, 0);
                 if(recvReturn == -1) {
-                    printf("Timeout! Esperando 2 segundos...");
+                    printf("Timeout! Esperando 2 segundos...\n");
                     continue;
                 }     
                 if(message.init_mark == 126 && message.type == 12) {
@@ -155,6 +156,15 @@ int main(int argc, char** argv) {
                 // ----- File -----
                 if(message.init_mark == 126 && (message.type == 0 || message.type == 9 || message.type == 8)) {                  
                     // Server-Client talk
+                    parity = calculateParity(&message);
+                    if(parity != message.parity) {
+                        nackCount++;
+                        if(nackCount <= 3) {
+                            printf("Paridade errada. NACK enviado!\n");
+                            sendResponse(sockfd, 0, 15, "", 0);
+                            continue;
+                        }
+                    }
                     if(message.type == 0)
                         sendResponse(sockfd, 0, 13, "", 0);
                     else if(message.type == 8)
@@ -181,6 +191,15 @@ int main(int argc, char** argv) {
                 // File
                 if(message.init_mark == 126 && (message.type == 0 || message.type == 9 || message.type == 8 || message.type == 10)) {
                     // Server-Client talk
+                    parity = calculateParity(&message);
+                    if(parity != message.parity) {
+                        nackCount++;
+                        if(nackCount <= 3) {
+                            printf("Paridade errada. NACK enviado!\n");
+                            sendResponse(sockfd, 0, 15, "", 0);
+                            continue;
+                        }
+                    }
                     if(message.type == 0)
                         sendResponse(sockfd, 0, 13, "", 0);
                     else if(message.type == 8)

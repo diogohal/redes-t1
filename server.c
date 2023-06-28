@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/time.h>
 #include <dirent.h>
 #include "rawSocketConnection.h"
 #include "packages.h"
@@ -87,9 +88,12 @@ int main() {
             // Server-Client talk
             parity = calculateParity(&message);
             if(parity != message.parity) {
-                printf("Paridade errada. NACK enviado!\n");
-                sendResponse(server, 0, 15, "", 0);
-                continue;
+                nackCount++;
+                if(nackCount <= 3) {
+                    printf("Paridade errada. NACK enviado!\n");
+                    sendResponse(server, 0, 15, "", 0);
+                    continue;
+                }
             }
             if(message.type == 0) 
                 sendResponse(server, 0, 13, "", 0);

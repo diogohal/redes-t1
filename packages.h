@@ -37,8 +37,6 @@ protocol_t **createMessageBuffer (unsigned char *msg, int fileSize, int bufferSi
 
 void sendMessage(protocol_t **messageBuffer, int socket, int bufferSize, int raw);
 
-void printBuff (protocol_t **buf, int bufferSize);
-
 root_t *createRoot();
 
 node_t *createNode(protocol_t *message);
@@ -50,8 +48,6 @@ int sendResponse(int raw, int sequel, int type, unsigned char *data, int size);
 int sendFile(FILE *file, unsigned char *fileName, int sockfd, int sequel);
 
 int receiveFileMessage(root_t *root, protocol_t message);
-
-void sendDirectory(unsigned char *dirPath, int socket);
 
 void destroyNodes(root_t *root);
 
